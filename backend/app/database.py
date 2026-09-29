@@ -4,6 +4,7 @@ import json
 import uuid
 import asyncio
 import socket
+import tempfile
 from datetime import datetime
 from bson import ObjectId
 from .config import settings
@@ -33,7 +34,12 @@ def is_mongodb_running(url: str) -> bool:
 class JSONCollection:
     def __init__(self, name: str, filepath: str = "local_db.json"):
         self.name = name
-        self.filepath = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", filepath))
+        # If running on Vercel, AWS Lambda, or a read-only environment, store in writable temp directory
+        target_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or not os.access(target_dir, os.W_OK):
+            self.filepath = os.path.join(tempfile.gettempdir(), filepath)
+        else:
+            self.filepath = os.path.join(target_dir, filepath)
         
     def _read_data(self):
         if not os.path.exists(self.filepath):
