@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - ResumeIQ AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/index.css">
+  <style>
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 2rem;
+    }
+    
+    .welcome-header {
+      margin-bottom: 2rem;
+    }
+    
+    .welcome-header h2 {
+      font-size: 2.2rem;
+      background: linear-gradient(135deg, #fff, var(--color-primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+    
+    .stat-card {
+      text-align: center;
+      padding: 1.5rem;
+    }
+    
+    .stat-val {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--color-primary);
+      margin-top: 0.5rem;
+    }
+    
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+    
+    @media (max-width: 800px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .chart-container {
+      position: relative;
+      height: 300px;
+      width: 100%;
+      margin-top: 1rem;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="logo">ResumeIQ AI</a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="dashboard.html" class="active">Dashboard</a></li>
+          <li><a href="analyze.html">Analyze</a></li>
+          <li><a href="history.html">History</a></li>
+          <li id="auth-nav-link"><a href="login.html" class="btn btn-secondary">Login</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="dashboard-container">
+    <div class="welcome-header">
+      <h2 id="welcome-msg">Loading dashboard...</h2>
+      <p style="color: var(--color-text-muted);">Overview of your parsed profiles and score metrics</p>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-dashboard" class="glass-card empty-state" style="display: none;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">📂</div>
+      <h3>No Resumes Analyzed Yet</h3>
+      <p style="color: var(--color-text-muted); margin-bottom: 2rem; margin-top: 0.5rem;">Upload and analyze your resume to populate dashboard statistics and metrics.</p>
+      <a href="analyze.html" class="btn">Analyze Resume Now</a>
+    </div>
+
+    <!-- Active State -->
+    <div id="active-dashboard" style="display: none;">
+      <div class="stats-grid">
+        <div class="glass-card stat-card tilt-card">
+          <h4 style="color: var(--color-text-muted);">Total Resumes</h4>
+          <div id="stat-total" class="stat-val">0</div>
+        </div>
+        <div class="glass-card stat-card tilt-card">
+          <h4 style="color: var(--color-text-muted);">Latest Score</h4>
+          <div id="stat-score" class="stat-val">0</div>
+        </div>
+        <div class="glass-card stat-card tilt-card">
+          <h4 style="color: var(--color-text-muted);">ATS Compatibility</h4>
+          <div id="stat-ats" class="stat-val">0%</div>
+        </div>
+        <div class="glass-card stat-card tilt-card">
+          <h4 style="color: var(--color-text-muted);">Skills Extracted</h4>
+          <div id="stat-skills" class="stat-val">0</div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="glass-card">
+          <h3>Resume Scores Distribution</h3>
+          <div class="chart-container">
+            <canvas id="scores-chart"></canvas>
+          </div>
+        </div>
+        <div class="glass-card">
+          <h3>Top Skills Categories</h3>
+          <div class="chart-container">
+            <canvas id="skills-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ChartJS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    checkAuth();
+
+    async function loadDashboard() {
+      const token = getAuthToken();
+      try {
+        let userName = "Candidate";
+        if (token) {
+          try {
+            const profileRes = await fetch(`${API_URL}/api/auth/profile`, {
+              headers: { "Authorization": `Bearer ${token}` }
+            });
+            if (profileRes.ok) {
+              const profile = await profileRes.json();
+              userName = profile.name || userName;
+            }
+          } catch(e) {}
+        }
+        document.getElementById("welcome-msg").textContent = `Welcome, ${userName}!`;
+
+        // Fetch user resume history details
+        let history = [];
+        try {
+          const historyRes = await fetch(`${API_URL}/api/resume/history`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (historyRes.ok) {
+            history = await historyRes.json();
+          }
+        } catch(e) {}
+
+        if (!Array.isArray(history) || history.length === 0) {
+          document.getElementById("empty-dashboard").style.display = "block";
+          document.getElementById("active-dashboard").style.display = "none";
+          return;
+        }
+
+        document.getElementById("empty-dashboard").style.display = "none";
+        document.getElementById("active-dashboard").style.display = "block";
+
+        // Calculate card values
+        const latest = history[0];
+        document.getElementById("stat-total").textContent = history.length;
+        document.getElementById("stat-score").textContent = Math.round(latest.overall_score);
+        document.getElementById("stat-ats").textContent = `${Math.round(latest.ats_score)}%`;
+        
+        let skillCount = 0;
+        if(latest.detected_skills) {
+          Object.values(latest.detected_skills).forEach(arr => {
+            if(Array.isArray(arr)) skillCount += arr.length;
+          });
+        }
+        document.getElementById("stat-skills").textContent = skillCount;
+
+        // Populate Charts
+        renderCharts(history);
+        initTilt();
+
+      } catch (err) {
+        logout();
+      }
+    }
+
+    function renderCharts(history) {
+      // Scores overview chart (line chart over time)
+      const reversedHist = [...history].reverse();
+      const labels = reversedHist.map((item, idx) => `Analysis #${idx+1}`);
+      const overallData = reversedHist.map(item => item.overall_score);
+      const atsData = reversedHist.map(item => item.ats_score);
+
+      const ctxScores = document.getElementById('scores-chart').getContext('2d');
+      new Chart(ctxScores, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Overall Score',
+            data: overallData,
+            borderColor: '#00c6ff',
+            backgroundColor: 'rgba(0, 198, 255, 0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true
+          }, {
+            label: 'ATS Compatibility',
+            data: atsData,
+            borderColor: '#9d4edd',
+            backgroundColor: 'rgba(157, 78, 221, 0.1)',
+            borderWidth: 2,
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { min: 0, max: 100, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+            x: { grid: { color: 'rgba(255, 255, 255, 0.05)' } }
+          },
+          plugins: {
+            legend: { labels: { color: '#e2e8f0' } }
+          }
+        }
+      });
+
+      // Skills radar/bar chart of latest resume categories
+      const latest = history[0];
+      const categories = [];
+      const skillCounts = [];
+      
+      if (latest.detected_skills) {
+        Object.entries(latest.detected_skills).forEach(([key, arr]) => {
+          if (Array.isArray(arr) && arr.length > 0) {
+            categories.push(key.replace('_', ' ').toUpperCase());
+            skillCounts.push(arr.length);
+          }
+        });
+      }
+
+      const ctxSkills = document.getElementById('skills-chart').getContext('2d');
+      new Chart(ctxSkills, {
+        type: 'bar',
+        data: {
+          labels: categories.length ? categories : ['LANGUAGES', 'DATABASES', 'TOOLS'],
+          datasets: [{
+            label: 'Number of Skills',
+            data: skillCounts.length ? skillCounts : [3, 2, 4],
+            backgroundColor: ['#00c6ff', '#0072ff', '#9d4edd', '#4ea8de', '#560bad', '#4cc9f0'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+            x: { grid: { color: 'rgba(255, 255, 255, 0.05)' } }
+          },
+          plugins: {
+            legend: { display: false }
+          }
+        }
+      });
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>

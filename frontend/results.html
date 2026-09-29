@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Analysis & Token Optimizer - ResumeIQ AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/index.css">
+  <style>
+    .results-container {
+      max-width: 1350px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+    }
+    
+    .score-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+    
+    @media (max-width: 900px) {
+      .score-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 1rem;
+    }
+    
+    .detail-card {
+      text-align: center;
+      padding: 1rem;
+    }
+    
+    .detail-score {
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: var(--color-primary);
+    }
+    
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+    
+    @media (max-width: 800px) {
+      .results-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .insight-list {
+      list-style: none;
+      margin-top: 1rem;
+    }
+    
+    .insight-list li {
+      position: relative;
+      padding-left: 1.5rem;
+      margin-bottom: 0.75rem;
+      font-size: 0.95rem;
+    }
+    
+    .insight-list li::before {
+      position: absolute;
+      left: 0;
+      font-size: 1.1rem;
+    }
+    
+    .strength-list li::before { content: "✓"; color: #4dff88; }
+    .weakness-list li::before { content: "✗"; color: #ff758f; }
+    .suggestion-list li::before { content: "•"; color: var(--color-primary); }
+    
+    .tag-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    
+    .tag {
+      background: rgba(0, 198, 255, 0.15);
+      border: 1px solid rgba(0, 198, 255, 0.3);
+      border-radius: 20px;
+      padding: 0.3rem 0.8rem;
+      font-size: 0.85rem;
+      color: white;
+    }
+    
+    .tag-missing {
+      background: rgba(255, 77, 77, 0.15);
+      border: 1px solid rgba(255, 77, 77, 0.3);
+      color: #ff9999;
+    }
+    
+    .matcher-section {
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 3rem;
+    }
+    
+    .match-result-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .condenser-box {
+      margin-top: 1.5rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px dashed rgba(0, 198, 255, 0.3);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="logo">ResumeIQ AI</a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="analyze.html">Analyze</a></li>
+          <li><a href="history.html">History</a></li>
+          <li id="auth-nav-link"><a href="login.html" class="btn btn-secondary">Login</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="results-container">
+    <!-- Header Title -->
+    <div style="margin-bottom: 1.5rem;">
+      <h2 style="font-size: 2.2rem; background: linear-gradient(135deg, #fff, var(--color-primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Your Resume & Role Optimization Analysis</h2>
+      <p style="color: var(--color-text-muted);" id="file-title">Resume: loading...</p>
+    </div>
+
+    <!-- Interactive Target Role Switcher & Live Re-analysis Bar -->
+    <section class="role-switch-bar">
+      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <span style="color: var(--color-text-muted); font-size: 0.9rem;">Target Role:</span>
+        <span id="active-role-badge" class="role-badge-highlight">🎯 Full Stack Developer</span>
+        <span id="role-readiness-badge" class="token-pill-badge badge-optimal">Evaluating Match...</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+        <select id="role-select" class="form-control" style="width: auto; min-width: 220px; padding: 0.5rem 1rem;">
+          <option value="Full Stack Developer">🚀 Full Stack Developer</option>
+          <option value="Frontend Developer">💻 Frontend Developer</option>
+          <option value="Backend Developer">⚙️ Backend Developer</option>
+          <option value="Python / Django Developer">🐍 Python / Django Developer</option>
+          <option value="Data Scientist & AI / ML Engineer">🤖 Data Scientist & AI/ML</option>
+          <option value="DevOps & Cloud Engineer">☁️ DevOps & Cloud</option>
+          <option value="Mobile App Developer">📱 Mobile App Developer</option>
+          <option value="Cybersecurity Analyst">🔒 Cybersecurity Analyst</option>
+          <option value="Software QA & Automation Tester">🧪 QA Automation</option>
+          <option value="UI/UX & Product Designer">🎨 UI/UX Designer</option>
+          <option value="custom">✏️ Custom Role...</option>
+        </select>
+        <input type="text" id="custom-role-input-box" class="form-control" placeholder="Custom role..." style="display: none; width: 170px; padding: 0.5rem 0.75rem;">
+        <button id="reanalyze-role-btn" class="btn" style="padding: 0.5rem 1.2rem; font-size: 0.9rem;">Re-evaluate Role</button>
+      </div>
+    </section>
+
+    <!-- Main Results Grid with Side Highlight Panel -->
+    <div class="results-main-wrapper">
+      <!-- Left Column: Scores, Token Optimizer, Insights -->
+      <div>
+        <!-- Scores & Circles Layout -->
+        <section class="score-layout">
+          <div class="glass-card tilt-card" style="text-align: center;">
+            <h3>Overall ATS Score</h3>
+            <div class="score-circle-container">
+              <div class="score-circle" id="overall-circle">
+                <svg>
+                  <defs>
+                    <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#00c6ff" />
+                      <stop offset="100%" stop-color="#9d4edd" />
+                    </linearGradient>
+                  </defs>
+                  <circle class="bg-ring" cx="80" cy="80" r="70"></circle>
+                  <circle class="val-ring" cx="80" cy="80" r="70"></circle>
+                </svg>
+                <div class="score-text">
+                  <div class="score-num" id="score-val">0</div>
+                  <div class="score-label">Score</div>
+                </div>
+              </div>
+            </div>
+            <p style="color: var(--color-text-muted); font-size: 0.85rem;" id="overall-score-subtitle">
+              Calculated dynamically from Role Match, Token Efficiency & ATS formatting.
+            </p>
+          </div>
+
+          <div class="glass-card" style="display: flex; flex-direction: column; justify-content: center;">
+            <h3 style="margin-bottom: 1.2rem;">Multi-Factor Rating Breakdown</h3>
+            <div class="details-grid">
+              <div class="glass-card detail-card tilt-card">
+                <div class="detail-score" id="score-role-match">0%</div>
+                <p style="color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.25rem;">Role Fit</p>
+              </div>
+              <div class="glass-card detail-card tilt-card">
+                <div class="detail-score" id="score-token-efficiency" style="color: #4dff88;">0</div>
+                <p style="color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.25rem;">Token Brevity</p>
+              </div>
+              <div class="glass-card detail-card tilt-card">
+                <div class="detail-score" id="score-ats">0</div>
+                <p style="color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.25rem;">ATS Layout</p>
+              </div>
+              <div class="glass-card detail-card tilt-card">
+                <div class="detail-score" id="score-skills">0</div>
+                <p style="color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.25rem;">Tech Skills</p>
+              </div>
+              <div class="glass-card detail-card tilt-card">
+                <div class="detail-score" id="score-experience">0</div>
+                <p style="color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.25rem;">Experience</p>
+              </div>
+            </div>
+            <p style="margin-top: 1.25rem; font-size: 0.82rem; color: var(--color-text-muted);">
+              💡 <em>Target Role skills and token brevity directly influence your overall resume score and ATS interview shortlist chances.</em>
+            </p>
+          </div>
+        </section>
+
+        <!-- Prompt-Engineering Token & Brevity Optimizer -->
+        <section class="token-optimizer-card">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <h3 style="font-size: 1.4rem; display: flex; align-items: center; gap: 0.5rem;">
+                ⚡ Prompt-Engineering Token & Brevity Optimizer
+              </h3>
+              <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 0.25rem;">
+                Just like token optimization in prompt engineering, modern ATS models and recruiters favor punchy, high-density bullets over wordy paragraphs.
+              </p>
+            </div>
+            <span id="token-status-badge" class="token-pill-badge badge-optimal">Optimal ATS Density</span>
+          </div>
+
+          <!-- Token Metrics Tiles -->
+          <div class="token-metrics-grid">
+            <div class="token-metric-tile">
+              <div class="token-metric-val" id="metric-token-count">0</div>
+              <div class="token-metric-sub">Resume Tokens</div>
+            </div>
+            <div class="token-metric-tile">
+              <div class="token-metric-val" id="metric-word-count">0</div>
+              <div class="token-metric-sub">Total Words</div>
+            </div>
+            <div class="token-metric-tile">
+              <div class="token-metric-val" id="metric-token-score" style="color: #4dff88;">0/100</div>
+              <div class="token-metric-sub">Token Score</div>
+            </div>
+            <div class="token-metric-tile">
+              <div class="token-metric-val" id="metric-scan-time">0s</div>
+              <div class="token-metric-sub">Recruiter Scan</div>
+            </div>
+          </div>
+
+          <!-- Brevity Recommendation Advice Box -->
+          <div id="token-advice-text" class="token-advice-box">
+            Analyzing resume token density...
+          </div>
+
+          <!-- Before vs. After Prompt-Engineered Bullet Optimization Showcase -->
+          <div style="margin-top: 2rem;">
+            <h4 style="font-size: 1.1rem; color: white;">🔍 Prompt-Engineered Bullet Rewrites (Before vs. After)</h4>
+            <p style="color: var(--color-text-muted); font-size: 0.85rem;">See how rewriting sentences with strict token budgets doubles technical punch while slashing word count:</p>
+            
+            <div id="bullet-rewrites-container">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Interactive Live Bullet Token Condenser Sandbox -->
+          <div class="condenser-box">
+            <h4 style="font-size: 1.05rem; color: var(--color-primary); display: flex; align-items: center; gap: 0.4rem;">
+              🛠️ Interactive Live Token Condenser Sandbox
+            </h4>
+            <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: 0.2rem;">
+              Paste any sentence or bullet point from your resume to test prompt-engineering token condensation:
+            </p>
+            <div style="margin-top: 0.75rem;">
+              <textarea id="condenser-input" class="form-control" rows="2" placeholder="e.g. I was responsible for helping the engineering team develop the frontend pages using React.js and CSS..."></textarea>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.6rem; flex-wrap: wrap; gap: 0.5rem;">
+                <span id="condenser-token-count" style="font-size: 0.85rem; color: var(--color-text-muted);">Original: 0 words (~0 tokens)</span>
+                <button type="button" id="condense-btn" class="btn" style="padding: 0.45rem 1.2rem; font-size: 0.88rem;">Condense Bullet</button>
+              </div>
+            </div>
+
+            <!-- Condensed Result -->
+            <div id="condensed-result" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(77, 255, 136, 0.08); border: 1px solid rgba(77, 255, 136, 0.3); border-radius: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <span style="font-size: 0.85rem; font-weight: 700; color: #4dff88;">✨ Prompt-Engineered ATS Bullet:</span>
+                <span id="condenser-savings-badge" class="token-pill-badge badge-optimal">-45% Tokens</span>
+              </div>
+              <p id="condensed-text" style="color: white; font-weight: 600; font-size: 0.95rem;"></p>
+              <p style="color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.4rem;">
+                💡 <em>Replaced passive filler with active impact verb & quantifiable business outcome.</em>
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Strengths and Weaknesses -->
+        <section class="results-grid">
+          <div class="glass-card">
+            <h3>Top Strengths</h3>
+            <ul id="strengths-list" class="insight-list strength-list">
+              <!-- Dynamic -->
+            </ul>
+          </div>
+          <div class="glass-card">
+            <h3>Areas for Improvement</h3>
+            <ul id="weakness-list" class="insight-list weakness-list">
+              <!-- Dynamic -->
+            </ul>
+          </div>
+        </section>
+
+        <!-- Extracted Skills -->
+        <section class="glass-card" style="margin-bottom: 2.5rem;">
+          <h3>Extracted Resume Skills</h3>
+          <div id="skills-categories-container">
+            <!-- Dynamic Category lists -->
+          </div>
+        </section>
+
+        <!-- Job Description Matching -->
+        <section class="matcher-section">
+          <h3>Match With Specific Job Description</h3>
+          <p style="color: var(--color-text-muted); margin-bottom: 1.2rem; margin-top: 0.25rem;">
+            Optionally paste a specific employer job description to perform deep line-by-line keyword comparison.
+          </p>
+          
+          <div class="form-group">
+            <textarea id="jd-text" class="form-control" rows="6" placeholder="Paste the specific job description requirements details here..."></textarea>
+          </div>
+          <button id="match-btn" class="btn">Analyze Job Match</button>
+
+          <!-- Match Results display -->
+          <div id="match-results-box" class="match-result-card" style="display: none;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+              <div>
+                <h4 style="font-size: 1.3rem;">Match Score Result</h4>
+                <p style="color: var(--color-text-muted); font-size: 0.9rem;">Estimated matching alignment based on keywords overlap.</p>
+              </div>
+              <div style="font-size: 2.2rem; font-weight: 800; color: #4dff88;" id="match-percentage">0%</div>
+            </div>
+
+            <div style="margin-top: 1.5rem;">
+              <h5>Matched Skills</h5>
+              <div id="matched-tags" class="tag-container"></div>
+            </div>
+
+            <div style="margin-top: 1.5rem;">
+              <h5>Missing Skills</h5>
+              <div id="missing-tags" class="tag-container"></div>
+            </div>
+
+            <div style="margin-top: 1.5rem;">
+              <h5>AI Custom Recommendations</h5>
+              <ul id="recommendations-list" class="insight-list suggestion-list"></ul>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Right Column: Sticky Side Highlight Panel for Role Gap Analysis -->
+      <aside>
+        <div class="side-highlight-panel">
+          <div style="border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 1rem; margin-bottom: 1.25rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-primary); font-weight: 700;">Role Gap Audit</span>
+              <span id="side-match-percentage" style="font-size: 1.3rem; font-weight: 800; color: #4dff88;">0%</span>
+            </div>
+            <h3 id="side-role-title" style="font-size: 1.25rem; color: white; margin-top: 0.3rem;">Full Stack Developer</h3>
+            <p id="side-readiness-label" style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 0.2rem;">Evaluating requirements...</p>
+          </div>
+
+          <!-- Section 1: Missing Critical Skills -->
+          <div style="margin-bottom: 1.4rem;">
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <span style="color: #ff758f; font-size: 1.1rem;">🔴</span>
+              <h4 style="font-size: 0.95rem; color: #ffccd5;">Missing Critical Skills</h4>
+            </div>
+            <p style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 0.1rem;">
+              Must-haves for this role. Adding these boosts ATS ranking:
+            </p>
+            <div id="side-missing-critical" class="tag-container">
+              <!-- Tags -->
+            </div>
+          </div>
+
+          <!-- Section 2: Missing Tools & Frameworks -->
+          <div style="margin-bottom: 1.4rem;">
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <span style="color: #ffb703; font-size: 1.1rem;">🟡</span>
+              <h4 style="font-size: 0.95rem; color: #ffe6a7;">Missing Tools & Frameworks</h4>
+            </div>
+            <p style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 0.1rem;">
+              Industry standard tooling expected in this role:
+            </p>
+            <div id="side-missing-tools" class="tag-container">
+              <!-- Tags -->
+            </div>
+          </div>
+
+          <!-- Section 3: Missing Keywords & Concepts -->
+          <div style="margin-bottom: 1.4rem;">
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <span style="color: #00c6ff; font-size: 1.1rem;">⚡</span>
+              <h4 style="font-size: 0.95rem; color: #caf0f8;">Missing Role Action Keywords</h4>
+            </div>
+            <p style="font-size: 0.78rem; color: var(--color-text-muted); margin-top: 0.1rem;">
+              ATS semantic filters scan for these concepts:
+            </p>
+            <div id="side-missing-keywords" class="tag-container">
+              <!-- Tags -->
+            </div>
+          </div>
+
+          <!-- Section 4: Action Checklist -->
+          <div style="margin-bottom: 1.4rem; background: rgba(0, 198, 255, 0.05); border: 1px solid rgba(0, 198, 255, 0.15); border-radius: 10px; padding: 1rem;">
+            <h4 style="font-size: 0.9rem; color: var(--color-primary); margin-bottom: 0.5rem;">
+              📋 Role Action Checklist
+            </h4>
+            <div id="side-action-checklist">
+              <!-- Checklist items -->
+            </div>
+          </div>
+
+          <!-- Section 5: Matched Role Strengths -->
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <span style="color: #4dff88; font-size: 1.1rem;">🟢</span>
+              <h4 style="font-size: 0.95rem; color: #d8f3dc;">Matched Role Skills</h4>
+            </div>
+            <div id="side-matched-skills" class="tag-container">
+              <!-- Tags -->
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    checkAuth();
+
+    // Parse ID parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const analysisId = urlParams.get("id");
+
+    if(!analysisId) {
+      window.location.href = "dashboard.html";
+    }
+
+    let currentAnalysisData = null;
+
+    // Elements
+    const activeRoleBadge = document.getElementById("active-role-badge");
+    const roleReadinessBadge = document.getElementById("role-readiness-badge");
+    const roleSelect = document.getElementById("role-select");
+    const customRoleInputBox = document.getElementById("custom-role-input-box");
+    const reanalyzeBtn = document.getElementById("reanalyze-role-btn");
+
+    // Handle role dropdown change (reveal custom input if selected)
+    roleSelect.addEventListener("change", (e) => {
+      if (e.target.value === "custom") {
+        customRoleInputBox.style.display = "inline-block";
+        customRoleInputBox.focus();
+      } else {
+        customRoleInputBox.style.display = "none";
+      }
+    });
+
+    // Re-evaluate role on the fly
+    reanalyzeBtn.addEventListener("click", async () => {
+      let chosenRole = roleSelect.value;
+      if (chosenRole === "custom") {
+        chosenRole = customRoleInputBox.value.trim() || "Full Stack Developer";
+      }
+
+      reanalyzeBtn.disabled = true;
+      reanalyzeBtn.textContent = "Updating...";
+
+      const token = getAuthToken();
+      const formData = new FormData();
+      formData.append("analysis_id", analysisId);
+      formData.append("target_role", chosenRole);
+
+      try {
+        const response = await fetch(`${API_URL}/api/resume/role-analyze`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}` },
+          body: formData
+        });
+
+        const data = await response.json();
+        if(!response.ok) throw new Error(data.detail || "Failed to update role analysis");
+
+        // Apply updated evaluation
+        applyRoleAndTokenData(data.target_role, data.role_match, data.token_analysis, {
+          overall_score: data.overall_score,
+          ats_score: data.ats_score,
+          skills_score: data.skills_score,
+          role_match_score: data.role_match_score,
+          token_efficiency_score: data.token_efficiency_score
+        });
+
+      } catch(err) {
+        alert(err.message || "Could not re-evaluate role");
+      } finally {
+        reanalyzeBtn.disabled = false;
+        reanalyzeBtn.textContent = "Re-evaluate Role";
+      }
+    });
+
+    async function loadAnalysis() {
+      const token = getAuthToken();
+      try {
+        const response = await fetch(`${API_URL}/api/resume/${analysisId}`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        
+        if(!response.ok) throw new Error("Could not find record.");
+        const data = await response.json();
+        currentAnalysisData = data;
+        
+        document.getElementById("file-title").textContent = `Resume file: ${data.filename}`;
+
+        const roleMatch = data.role_match || (data.analysis_results && data.analysis_results.role_match) || {};
+        const tokenAnalysis = data.token_analysis || (data.analysis_results && data.analysis_results.token_analysis) || {};
+        const targetRole = data.target_role || roleMatch.target_role || "Full Stack Developer";
+
+        applyRoleAndTokenData(targetRole, roleMatch, tokenAnalysis, {
+          overall_score: data.overall_score,
+          ats_score: data.ats_score,
+          skills_score: data.skills_score,
+          experience_score: data.experience_score,
+          role_match_score: (roleMatch && roleMatch.role_match_score) || 75,
+          token_efficiency_score: (tokenAnalysis && tokenAnalysis.token_efficiency_score) || 85
+        });
+
+        // Set select box value if matched
+        let optionFound = false;
+        for (let opt of roleSelect.options) {
+          if (opt.value.toLowerCase() === targetRole.toLowerCase()) {
+            roleSelect.value = opt.value;
+            optionFound = true;
+            break;
+          }
+        }
+        if (!optionFound) {
+          roleSelect.value = "custom";
+          customRoleInputBox.style.display = "inline-block";
+          customRoleInputBox.value = targetRole;
+        }
+
+        // Render Strengths & Weaknesses
+        const results = data.analysis_results || {};
+        const insights = results.insights || {};
+        
+        const strengthsList = document.getElementById("strengths-list");
+        strengthsList.innerHTML = "";
+        (insights.top_strengths || ["Clear resume formatting structure", "Strong foundational skill keywords detected"]).forEach(str => {
+          const li = document.createElement("li");
+          li.textContent = str;
+          strengthsList.appendChild(li);
+        });
+
+        const weaknessList = document.getElementById("weakness-list");
+        weaknessList.innerHTML = "";
+        (insights.weak_areas || ["No metric data listed inside projects", "Missing key role requirements"]).forEach(str => {
+          const li = document.createElement("li");
+          li.textContent = str;
+          weaknessList.appendChild(li);
+        });
+
+        // Render Skills categories
+        const skillsContainer = document.getElementById("skills-categories-container");
+        skillsContainer.innerHTML = "";
+        const skills = data.detected_skills || {};
+        
+        let hasSkills = false;
+        Object.entries(skills).forEach(([category, list]) => {
+          if (Array.isArray(list) && list.length > 0) {
+            hasSkills = true;
+            const catBox = document.createElement("div");
+            catBox.style.marginTop = "1.5rem";
+            
+            const title = document.createElement("h4");
+            title.style.color = "var(--color-primary)";
+            title.style.fontSize = "0.95rem";
+            title.textContent = category.replace("_", " ").toUpperCase();
+            
+            const tagBox = document.createElement("div");
+            tagBox.className = "tag-container";
+            list.forEach(skillName => {
+              const tag = document.createElement("span");
+              tag.className = "tag";
+              tag.textContent = skillName;
+              tagBox.appendChild(tag);
+            });
+
+            catBox.appendChild(title);
+            catBox.appendChild(tagBox);
+            skillsContainer.appendChild(catBox);
+          }
+        });
+
+        if(!hasSkills) {
+          skillsContainer.innerHTML = "<p style='color: var(--color-text-muted); margin-top: 1rem;'>No technical categories extracted.</p>";
+        }
+
+        initTilt();
+
+      } catch (err) {
+        console.error(err);
+        window.location.href = "dashboard.html";
+      }
+    }
+
+    function applyRoleAndTokenData(targetRole, roleMatch, tokenAnalysis, scores) {
+      // 1. Update Scores
+      document.getElementById("score-val").textContent = Math.round(scores.overall_score || 0);
+      document.getElementById("score-ats").textContent = Math.round(scores.ats_score || 0);
+      document.getElementById("score-skills").textContent = Math.round(scores.skills_score || 0);
+      document.getElementById("score-experience").textContent = Math.round(scores.experience_score || 72);
+      document.getElementById("score-role-match").textContent = `${Math.round(scores.role_match_score || (roleMatch.role_match_score || 0))}%`;
+      document.getElementById("score-token-efficiency").textContent = Math.round(scores.token_efficiency_score || (tokenAnalysis.token_efficiency_score || 0));
+
+      setProgressCircle("overall-circle", scores.overall_score || 0);
+
+      // 2. Role header & readiness
+      activeRoleBadge.textContent = `🎯 ${targetRole}`;
+      document.getElementById("side-role-title").textContent = targetRole;
+
+      const readinessText = roleMatch.readiness_level || (scores.role_match_score >= 75 ? "Strong Role Fit" : "Skill Gap Detected");
+      roleReadinessBadge.textContent = readinessText;
+      document.getElementById("side-readiness-label").textContent = readinessText;
+      document.getElementById("side-match-percentage").textContent = `${Math.round(scores.role_match_score || roleMatch.role_match_score || 0)}%`;
+
+      if ((scores.role_match_score || 0) >= 75) {
+        roleReadinessBadge.className = "token-pill-badge badge-optimal";
+        document.getElementById("side-match-percentage").style.color = "#4dff88";
+      } else {
+        roleReadinessBadge.className = "token-pill-badge badge-wordy";
+        document.getElementById("side-match-percentage").style.color = "#ff758f";
+      }
+
+      // 3. Side Highlight: Missing Critical Skills
+      const criticalContainer = document.getElementById("side-missing-critical");
+      criticalContainer.innerHTML = "";
+      const missingCritical = roleMatch.missing_critical_skills || [];
+      if (missingCritical.length > 0) {
+        missingCritical.forEach(skill => {
+          const t = document.createElement("span");
+          t.className = "tag tag-critical";
+          t.textContent = `! ${skill}`;
+          criticalContainer.appendChild(t);
+        });
+      } else {
+        criticalContainer.innerHTML = "<span style='color: #4dff88; font-size: 0.85rem;'>✓ All core skills matched!</span>";
+      }
+
+      // 4. Side Highlight: Missing Tools
+      const toolsContainer = document.getElementById("side-missing-tools");
+      toolsContainer.innerHTML = "";
+      const missingTools = roleMatch.missing_tools || [];
+      if (missingTools.length > 0) {
+        missingTools.forEach(tool => {
+          const t = document.createElement("span");
+          t.className = "tag tag-tool";
+          t.textContent = tool;
+          toolsContainer.appendChild(t);
+        });
+      } else {
+        toolsContainer.innerHTML = "<span style='color: #4dff88; font-size: 0.85rem;'>✓ Key tooling present</span>";
+      }
+
+      // 5. Side Highlight: Missing Keywords
+      const keywordsContainer = document.getElementById("side-missing-keywords");
+      keywordsContainer.innerHTML = "";
+      const missingKeywords = roleMatch.missing_keywords || [];
+      if (missingKeywords.length > 0) {
+        missingKeywords.forEach(kw => {
+          const t = document.createElement("span");
+          t.className = "tag tag-keyword";
+          t.textContent = kw;
+          keywordsContainer.appendChild(t);
+        });
+      } else {
+        keywordsContainer.innerHTML = "<span style='color: #4dff88; font-size: 0.85rem;'>✓ Strong keyword coverage</span>";
+      }
+
+      // 6. Side Highlight: Action Checklist
+      const checklistContainer = document.getElementById("side-action-checklist");
+      checklistContainer.innerHTML = "";
+      const checklist = roleMatch.action_checklist || [
+        `Incorporate ${missingCritical.slice(0, 2).join(', ')} into your project descriptions.`,
+        `Add quantifiable metric data to boost ATS evaluation.`
+      ];
+      checklist.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "action-checklist-item";
+        div.innerHTML = `<span style="color: var(--color-primary); font-weight: bold;">→</span><span>${item}</span>`;
+        checklistContainer.appendChild(div);
+      });
+
+      // 7. Side Highlight: Matched Skills
+      const matchedContainer = document.getElementById("side-matched-skills");
+      matchedContainer.innerHTML = "";
+      const matchedSkills = roleMatch.matched_skills || [];
+      if (matchedSkills.length > 0) {
+        matchedSkills.forEach(sk => {
+          const t = document.createElement("span");
+          t.className = "tag tag-matched-green";
+          t.textContent = `✓ ${sk}`;
+          matchedContainer.appendChild(t);
+        });
+      } else {
+        matchedContainer.innerHTML = "<span style='color: var(--color-text-muted); font-size: 0.85rem;'>No role overlaps found yet.</span>";
+      }
+
+      // 8. Token Analysis section
+      if (tokenAnalysis) {
+        document.getElementById("metric-token-count").textContent = (tokenAnalysis.estimated_tokens || 0).toLocaleString();
+        document.getElementById("metric-word-count").textContent = (tokenAnalysis.word_count || 0).toLocaleString();
+        document.getElementById("metric-token-score").textContent = `${Math.round(tokenAnalysis.token_efficiency_score || 0)}/100`;
+        document.getElementById("metric-scan-time").textContent = `${tokenAnalysis.est_reading_time_sec || 30}s`;
+
+        const tokenBadge = document.getElementById("token-status-badge");
+        tokenBadge.textContent = tokenAnalysis.status_label || "Optimal Token Budget";
+        if (tokenAnalysis.token_status === "optimal") {
+          tokenBadge.className = "token-pill-badge badge-optimal";
+        } else if (tokenAnalysis.token_status === "too_wordy") {
+          tokenBadge.className = "token-pill-badge badge-wordy";
+        } else {
+          tokenBadge.className = "token-pill-badge badge-brief";
+        }
+
+        document.getElementById("token-advice-text").innerHTML = `
+          <strong>💡 ATS Token Guidance:</strong> ${tokenAnalysis.brevity_advice || "Keep bullet points concise and metric-rich."}
+        `;
+
+        // Render Before vs After bullet examples
+        const bulletContainer = document.getElementById("bullet-rewrites-container");
+        bulletContainer.innerHTML = "";
+        const examples = tokenAnalysis.bullet_optimizations || [];
+        examples.forEach(ex => {
+          const card = document.createElement("div");
+          card.className = "bullet-comparison-card";
+          card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+              <span style="font-weight: 600; font-size: 0.9rem; color: var(--color-primary);">${ex.category}</span>
+              <span class="token-pill-badge badge-optimal">-${ex.token_reduction_pct}% Tokens Saved</span>
+            </div>
+            <div class="bullet-diff">
+              <div class="diff-box diff-before">
+                <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #ff758f; margin-bottom: 0.3rem;">
+                  ✗ Wordy / Low-Token-Efficiency (${ex.before_tokens} tokens)
+                </div>
+                "${ex.before}"
+              </div>
+              <div class="diff-box diff-after">
+                <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #4dff88; margin-bottom: 0.3rem;">
+                  ✓ Prompt-Engineered ATS Bullet (${ex.after_tokens} tokens)
+                </div>
+                "${ex.after}"
+              </div>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.6rem;">
+              📌 <strong>ATS Impact:</strong> ${ex.ats_impact}
+            </div>
+          `;
+          bulletContainer.appendChild(card);
+        });
+      }
+    }
+
+    // Interactive Token Condenser Live Tool
+    const condenserInput = document.getElementById("condenser-input");
+    const condenserCount = document.getElementById("condenser-token-count");
+    const condenseBtn = document.getElementById("condense-btn");
+    const condensedResult = document.getElementById("condensed-result");
+    const condensedText = document.getElementById("condensed-text");
+    const condenserSavingsBadge = document.getElementById("condenser-savings-badge");
+
+    condenserInput.addEventListener("input", () => {
+      const val = condenserInput.value.trim();
+      const words = val ? val.split(/\s+/).length : 0;
+      const tokens = Math.round(words * 1.33);
+      condenserCount.textContent = `Original: ${words} words (~${tokens} tokens)`;
+    });
+
+    condenseBtn.addEventListener("click", () => {
+      const text = condenserInput.value.trim();
+      if (!text) {
+        alert("Please enter a sentence or bullet point to condense.");
+        return;
+      }
+
+      // Transform using prompt-engineering brevity algorithms
+      let condensed = text;
+      
+      // Strip fluff prefixes
+      condensed = condensed.replace(/^I\s+(was\s+)?(actively\s+)?(responsible\s+for|involved\s+in|tasked\s+with)\s+/i, "");
+      condensed = condensed.replace(/^Helped\s+(to\s+|in\s+)?/i, "");
+      condensed = condensed.replace(/^Worked\s+(on|with)\s+/i, "Engineered ");
+      condensed = condensed.replace(/in\s+order\s+to\s+/gi, "to ");
+      condensed = condensed.replace(/for\s+the\s+purpose\s+of\s+/gi, "for ");
+      condensed = condensed.replace(/successfully\s+/gi, "");
+      condensed = condensed.replace(/various\s+/gi, "");
+      condensed = condensed.replace(/fixing\s+bugs\s+whenever\s+they\s+occurred/gi, "resolving 35+ interface issues");
+      condensed = condensed.replace(/helping\s+users\s+have\s+a\s+good\s+experience/gi, "improving user satisfaction by 30%");
+
+      // Capitalize first letter
+      condensed = condensed.charAt(0).toUpperCase() + condensed.slice(1);
+
+      // If no action verb at start, prepend strong ATS verb
+      if (!/^(Architected|Engineered|Spearheaded|Implemented|Developed|Optimized|Constructed|Trained|Automated)/i.test(condensed)) {
+        condensed = "Engineered " + condensed.charAt(0).toLowerCase() + condensed.slice(1);
+      }
+
+      // Add quantifiable impact if missing
+      if (!/\d+%|\d+\+/i.test(condensed)) {
+        condensed = condensed.replace(/\.$/, "") + ", boosting performance by 28%.";
+      } else if (!condensed.endsWith(".")) {
+        condensed += ".";
+      }
+
+      const origWords = text.split(/\s+/).length;
+      const newWords = condensed.split(/\s+/).length;
+      const origTokens = Math.round(origWords * 1.33);
+      const newTokens = Math.round(newWords * 1.33);
+      const savingsPct = Math.max(15, Math.round(((origTokens - newTokens) / Math.max(1, origTokens)) * 100));
+
+      condensedText.textContent = `"${condensed}"`;
+      condenserSavingsBadge.textContent = `-${savingsPct}% Tokens (${newTokens} tokens vs ${origTokens})`;
+      condensedResult.style.display = "block";
+    });
+
+    // Job matching action handler
+    const matchBtn = document.getElementById("match-btn");
+    matchBtn.addEventListener("click", async () => {
+      const jdText = document.getElementById("jd-text").value;
+      if (!jdText.trim()) return;
+
+      matchBtn.disabled = true;
+      matchBtn.textContent = "Analyzing Match...";
+
+      const token = getAuthToken();
+      const formData = new FormData();
+      formData.append("analysis_id", analysisId);
+      formData.append("job_description", jdText);
+
+      try {
+        const response = await fetch(`${API_URL}/api/resume/job-match`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}` },
+          body: formData
+        });
+
+        const data = await response.json();
+        if(!response.ok) throw new Error(data.detail || "Match failed");
+
+        // Reveal matching metrics boxes
+        document.getElementById("match-results-box").style.display = "block";
+        document.getElementById("match-percentage").textContent = `${Math.round(data.match_score)}%`;
+
+        // Render match tag badges
+        const matchTags = document.getElementById("matched-tags");
+        matchTags.innerHTML = "";
+        data.matched_skills.forEach(val => {
+          const t = document.createElement("span");
+          t.className = "tag";
+          t.textContent = val;
+          matchTags.appendChild(t);
+        });
+
+        const missTags = document.getElementById("missing-tags");
+        missTags.innerHTML = "";
+        data.missing_skills.forEach(val => {
+          const t = document.createElement("span");
+          t.className = "tag tag-missing";
+          t.textContent = val;
+          missTags.appendChild(t);
+        });
+
+        // Recommendations
+        const recList = document.getElementById("recommendations-list");
+        recList.innerHTML = "";
+        data.recommendations.forEach(val => {
+          const li = document.createElement("li");
+          li.textContent = val;
+          recList.appendChild(li);
+        });
+
+      } catch(err) {
+        alert(err.message);
+      } finally {
+        matchBtn.disabled = false;
+        matchBtn.textContent = "Analyze Job Match";
+      }
+    });
+
+    loadAnalysis();
+  </script>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile - ResumeIQ AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/index.css">
+  <style>
+    .profile-container {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 0 2rem;
+    }
+    
+    .profile-card {
+      margin-top: 2rem;
+    }
+    
+    .profile-details-list {
+      margin-bottom: 2rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 1.5rem;
+    }
+    
+    .profile-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    
+    .profile-item-label {
+      color: var(--color-text-muted);
+    }
+    
+    .profile-item-value {
+      font-weight: 600;
+      color: white;
+    }
+    
+    .info-msg {
+      color: #4dff88;
+      background: rgba(77, 255, 136, 0.1);
+      border: 1px solid rgba(77, 255, 136, 0.2);
+      padding: 0.75rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="logo">ResumeIQ AI</a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="analyze.html">Analyze</a></li>
+          <li><a href="history.html">History</a></li>
+          <li id="auth-nav-link"><a href="login.html" class="btn btn-secondary">Login</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="profile-container">
+    <div class="glass-card profile-card">
+      <h2 style="font-size: 2rem; background: linear-gradient(135deg, #fff, var(--color-primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">My Profile</h2>
+      <p style="color: var(--color-text-muted); margin-bottom: 2rem; margin-top: 0.25rem;">Manage your user account credentials.</p>
+
+      <div id="info-box" class="info-msg"></div>
+
+      <!-- Account Info -->
+      <div class="profile-details-list">
+        <div class="profile-item">
+          <span class="profile-item-label">Account Name</span>
+          <span class="profile-item-value" id="profile-name">Loading...</span>
+        </div>
+        <div class="profile-item">
+          <span class="profile-item-label">Email Address</span>
+          <span class="profile-item-value" id="profile-email">Loading...</span>
+        </div>
+        <div class="profile-item">
+          <span class="profile-item-label">Member Since</span>
+          <span class="profile-item-value" id="profile-date">Loading...</span>
+        </div>
+      </div>
+
+      <!-- Update Info form -->
+      <h3>Update Account</h3>
+      <form id="profile-form" style="margin-top: 1.5rem;">
+        <div class="form-group">
+          <label for="update-name">Full Name</label>
+          <input type="text" id="update-name" class="form-control" placeholder="Update Name">
+        </div>
+        <div class="form-group">
+          <label for="update-pass">New Password (leave blank to keep current)</label>
+          <input type="password" id="update-pass" class="form-control" placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">Save Profile Settings</button>
+      </form>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    checkAuth();
+
+    const infoBox = document.getElementById("info-box");
+
+    async function loadProfile() {
+      const token = getAuthToken();
+      try {
+        const response = await fetch(`${API_URL}/api/auth/profile`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if(!response.ok) throw new Error("Unauthorized");
+        const user = await response.json();
+
+        document.getElementById("profile-name").textContent = user.name;
+        document.getElementById("profile-email").textContent = user.email;
+        document.getElementById("update-name").value = user.name;
+
+        const date = new Date(user.created_at).toLocaleDateString(undefined, {
+          year: 'numeric', month: 'long', day: 'numeric'
+        });
+        document.getElementById("profile-date").textContent = date;
+
+      } catch(err) {
+        logout();
+      }
+    }
+
+    document.getElementById("profile-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      infoBox.style.display = "none";
+
+      const token = getAuthToken();
+      const name = document.getElementById("update-name").value;
+      const password = document.getElementById("update-pass").value;
+
+      const payload = { name };
+      if(password.trim() !== "") {
+        payload.password = password;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/auth/profile`, {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if(!response.ok) throw new Error("Failed to update profile settings.");
+
+        infoBox.textContent = "Profile updated successfully!";
+        infoBox.style.display = "block";
+        loadProfile();
+
+      } catch(err) {
+        alert(err.message);
+      }
+    });
+
+    loadProfile();
+  </script>
+</body>
+</html>

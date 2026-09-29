@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Resume - ResumeIQ AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/index.css">
+  <style>
+    .upload-container {
+      max-width: 800px;
+      margin: 3rem auto;
+      padding: 0 2rem;
+      text-align: center;
+    }
+    
+    .upload-zone {
+      border: 2px dashed rgba(0, 198, 255, 0.4);
+      border-radius: 16px;
+      padding: 4rem 2rem;
+      background: rgba(22, 22, 49, 0.4);
+      cursor: pointer;
+      transition: all var(--transition-speed);
+      margin: 2rem 0;
+    }
+    
+    .upload-zone.dragover {
+      border-color: var(--color-primary);
+      background: rgba(0, 198, 255, 0.08);
+      transform: scale(1.02);
+    }
+    
+    .file-details {
+      margin-top: 1.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      padding: 1rem;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    /* Stepper Loading screen */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 10, 22, 0.95);
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+    }
+    
+    .loading-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+    
+    .steps-container {
+      width: 100%;
+      max-width: 400px;
+      text-align: left;
+      margin-top: 2rem;
+    }
+    
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      color: var(--color-text-muted);
+      transition: color 0.3s;
+    }
+    
+    .step-item.active {
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+    
+    .step-item.done {
+      color: #4dff88;
+    }
+    
+    .step-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
+    .step-item.active .step-dot {
+      background: var(--color-primary);
+      box-shadow: 0 0 10px var(--color-primary);
+    }
+    
+    .step-item.done .step-dot {
+      background: #4dff88;
+    }
+    
+    .error-banner {
+      color: #ff4d4d;
+      background: rgba(255, 77, 77, 0.1);
+      border: 1px solid rgba(255, 77, 77, 0.2);
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 2rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="logo">ResumeIQ AI</a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="analyze.html" class="active">Analyze</a></li>
+          <li><a href="history.html">History</a></li>
+          <li id="auth-nav-link"><a href="login.html" class="btn btn-secondary">Login</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="upload-container">
+    <div class="glass-card">
+      <h2 style="font-size: 2rem;">Upload Your Resume</h2>
+      <p style="color: var(--color-text-muted); margin-top: 0.5rem;">Select your resume in PDF format to run our high fidelity AI evaluation.</p>
+      
+      <div id="error-banner" class="error-banner"></div>
+
+      <!-- Drag & Drop Upload Zone -->
+      <div id="drop-zone" class="upload-zone">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📁</div>
+        <h3>Drag and drop your PDF resume here</h3>
+        <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Or click to browse files (Max 5MB)</p>
+        <input type="file" id="file-input" accept="application/pdf" style="display: none;">
+      </div>
+
+      <!-- File Details -->
+      <div id="file-card" class="file-details" style="display: none;">
+        <div style="text-align: left;">
+          <h4 id="file-name" style="color: white; word-break: break-all;">resume.pdf</h4>
+          <p id="file-size" style="color: var(--color-text-muted); font-size: 0.85rem;">0 KB</p>
+        </div>
+        <button id="remove-file-btn" class="btn btn-secondary" style="padding: 0.5rem 1rem; border-color: #ff4d4d; color: #ff4d4d;">Remove</button>
+      </div>
+
+      <!-- Target Role Selection Box -->
+      <div id="role-selection-card" class="role-box" style="display: none;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+          <div>
+            <h3 style="font-size: 1.15rem; color: #fff;">🎯 Step 2: Select Your Target Role</h3>
+            <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: 0.2rem;">
+              Choose the role you are targeting to detect missing critical skills & prompt token efficiency.
+            </p>
+          </div>
+          <span id="selected-role-badge" class="role-badge-highlight">Full Stack Developer</span>
+        </div>
+
+        <div class="role-chips-grid" id="role-chips-container">
+          <button type="button" class="role-chip active" data-role="Full Stack Developer">🚀 Full Stack Developer</button>
+          <button type="button" class="role-chip" data-role="Frontend Developer">💻 Frontend Developer</button>
+          <button type="button" class="role-chip" data-role="Backend Developer">⚙️ Backend Developer</button>
+          <button type="button" class="role-chip" data-role="Python / Django Developer">🐍 Python / Django Developer</button>
+          <button type="button" class="role-chip" data-role="Data Scientist & AI / ML Engineer">🤖 Data Scientist & AI/ML</button>
+          <button type="button" class="role-chip" data-role="DevOps & Cloud Engineer">☁️ DevOps & Cloud</button>
+          <button type="button" class="role-chip" data-role="Mobile App Developer">📱 Mobile App Developer</button>
+          <button type="button" class="role-chip" data-role="Cybersecurity Analyst">🔒 Cybersecurity Analyst</button>
+          <button type="button" class="role-chip" data-role="Software QA & Automation Tester">🧪 QA Automation</button>
+          <button type="button" class="role-chip" data-role="UI/UX & Product Designer">🎨 UI/UX Designer</button>
+        </div>
+
+        <div class="custom-role-input-group">
+          <input type="text" id="custom-role-input" class="form-control" placeholder="Or type custom role (e.g. Cloud Security Architect, NLP Engineer)...">
+          <button type="button" id="apply-custom-role-btn" class="btn btn-secondary" style="white-space: nowrap;">Set Role</button>
+        </div>
+      </div>
+
+      <button id="analyze-btn" class="btn" style="width: 100%; margin-top: 2rem; display: none;">Analyze Resume with AI</button>
+    </div>
+  </main>
+
+  <!-- Step loading screen overlay -->
+  <div id="loading-overlay" class="loading-overlay">
+    <div style="font-size: 3.5rem;" class="spinner">⚙️</div>
+    <h2 style="margin-top: 1.5rem; background: linear-gradient(135deg, #fff, var(--color-primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Analyzing Your Resume</h2>
+    <p style="color: var(--color-text-muted); margin-top: 0.5rem;">Please wait while our models analyze your profile.</p>
+
+    <div class="steps-container">
+      <div class="step-item" id="step-1"><div class="step-dot"></div> Reading your resume PDF...</div>
+      <div class="step-item" id="step-2"><div class="step-dot"></div> Extracting information & skills...</div>
+      <div class="step-item" id="step-3"><div class="step-dot"></div> Benchmarking against target role...</div>
+      <div class="step-item" id="step-4"><div class="step-dot"></div> Evaluating word count & prompt token brevity...</div>
+      <div class="step-item" id="step-5"><div class="step-dot"></div> Side-highlighting missing skills & gaps...</div>
+      <div class="step-item" id="step-6"><div class="step-dot"></div> Generating AI scores & bullet optimizations...</div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    checkAuth();
+
+    const dropZone = document.getElementById("drop-zone");
+    const fileInput = document.getElementById("file-input");
+    const fileCard = document.getElementById("file-card");
+    const fileName = document.getElementById("file-name");
+    const fileSize = document.getElementById("file-size");
+    const removeBtn = document.getElementById("remove-file-btn");
+    const analyzeBtn = document.getElementById("analyze-btn");
+    const errorBanner = document.getElementById("error-banner");
+    const loadingOverlay = document.getElementById("loading-overlay");
+    const roleCard = document.getElementById("role-selection-card");
+    const selectedRoleBadge = document.getElementById("selected-role-badge");
+    const customRoleInput = document.getElementById("custom-role-input");
+    const applyCustomRoleBtn = document.getElementById("apply-custom-role-btn");
+
+    let selectedFile = null;
+    let selectedTargetRole = "Full Stack Developer";
+
+    // Handle role chips
+    document.querySelectorAll(".role-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        document.querySelectorAll(".role-chip").forEach(c => c.classList.remove("active"));
+        chip.classList.add("active");
+        selectedTargetRole = chip.getAttribute("data-role");
+        selectedRoleBadge.textContent = selectedTargetRole;
+        customRoleInput.value = "";
+      });
+    });
+
+    applyCustomRoleBtn.addEventListener("click", () => {
+      const val = customRoleInput.value.trim();
+      if (val) {
+        document.querySelectorAll(".role-chip").forEach(c => c.classList.remove("active"));
+        selectedTargetRole = val;
+        selectedRoleBadge.textContent = `✏️ ${selectedTargetRole}`;
+      }
+    });
+
+    customRoleInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        applyCustomRoleBtn.click();
+      }
+    });
+
+    // Trigger file chooser
+    dropZone.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", (e) => {
+      if (e.target.files.length > 0) {
+        handleFileSelect(e.target.files[0]);
+      }
+    });
+
+    // Drag-drop events
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+      if (e.dataTransfer.files.length > 0) {
+        handleFileSelect(e.dataTransfer.files[0]);
+      }
+    });
+
+    function handleFileSelect(file) {
+      errorBanner.style.display = "none";
+      if (file.type !== "application/pdf") {
+        showError("Invalid file type. Please upload a PDF file.");
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        showError("File size is too large. Max allowed size is 5MB.");
+        return;
+      }
+
+      selectedFile = file;
+      fileName.textContent = file.name;
+      fileSize.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+      
+      dropZone.style.display = "none";
+      fileCard.style.display = "flex";
+      roleCard.style.display = "block";
+      analyzeBtn.style.display = "block";
+    }
+
+    removeBtn.addEventListener("click", () => {
+      selectedFile = null;
+      fileInput.value = "";
+      fileCard.style.display = "none";
+      roleCard.style.display = "none";
+      analyzeBtn.style.display = "none";
+      dropZone.style.display = "block";
+    });
+
+    function showError(msg) {
+      errorBanner.textContent = msg;
+      errorBanner.style.display = "block";
+    }
+
+    // Step indicators loop simulating real steps as files process
+    async function runLoaderSequence() {
+      const steps = ['step-1', 'step-2', 'step-3', 'step-4', 'step-5', 'step-6'];
+      for (let i = 0; i < steps.length; i++) {
+        const item = document.getElementById(steps[i]);
+        if (i > 0) {
+          document.getElementById(steps[i-1]).className = "step-item done";
+        }
+        item.className = "step-item active";
+        await new Promise(r => setTimeout(r, 700));
+      }
+    }
+
+    analyzeBtn.addEventListener("click", async () => {
+      if(!selectedFile) return;
+
+      errorBanner.style.display = "none";
+      loadingOverlay.classList.add("active");
+      
+      // Run visual progression loop
+      const progressTimer = runLoaderSequence();
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("target_role", selectedTargetRole);
+
+      try {
+        const token = getAuthToken();
+        const response = await fetch(`${API_URL}/api/resume/upload`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          },
+          body: formData
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.detail || "Analysis failed.");
+        }
+
+        // Wait to finish loader
+        await progressTimer;
+        
+        // Redirect to detail page
+        setTimeout(() => {
+          window.location.href = `results.html?id=${data.id}`;
+        }, 500);
+
+      } catch (err) {
+        loadingOverlay.classList.remove("active");
+        showError(err.message || "Failed to analyze resume.");
+      }
+    });
+  </script>
+</body>
+</html>

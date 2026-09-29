@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - ResumeIQ AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/index.css">
+  <style>
+    .auth-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 80vh;
+      padding: 2rem;
+    }
+    
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+    }
+    
+    .auth-card h2 {
+      margin-bottom: 0.5rem;
+      font-size: 2rem;
+    }
+    
+    .auth-card p {
+      color: var(--color-text-muted);
+      margin-bottom: 2rem;
+    }
+    
+    .error-msg {
+      color: #ff4d4d;
+      background: rgba(255, 77, 77, 0.1);
+      border: 1px solid rgba(255, 77, 77, 0.2);
+      padding: 0.75rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      display: none;
+    }
+    
+    .success-msg {
+      color: #4dff88;
+      background: rgba(77, 255, 136, 0.1);
+      border: 1px solid rgba(77, 255, 136, 0.2);
+      padding: 0.75rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="logo">ResumeIQ AI</a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="analyze.html">Analyze</a></li>
+          <li><a href="history.html">History</a></li>
+          <li id="auth-nav-link"><a href="login.html" class="btn btn-secondary">Login</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="auth-container">
+    <div class="glass-card auth-card">
+      <h2>Welcome Back</h2>
+      <p>Log in to access your analyses</p>
+      
+      <div id="error" class="error-msg"></div>
+      <div id="success" class="success-msg"></div>
+      
+      <form id="login-form">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" class="form-control" placeholder="name@example.com" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">Log In</button>
+      </form>
+      
+      <p style="margin-top: 1.5rem; font-size: 0.9rem;">
+        Don't have an account? <a href="register.html" style="color: var(--color-primary); text-decoration: none;">Register here</a>
+      </p>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    const form = document.getElementById("login-form");
+    const errorDiv = document.getElementById("error");
+    const successDiv = document.getElementById("success");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorDiv.style.display = "none";
+      successDiv.style.display = "none";
+      
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      try {
+        const response = await fetch(`${API_URL}/api/auth/login`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.detail || "Authentication failed. Please try again.");
+        }
+
+        successDiv.textContent = "Login successful! Redirecting...";
+        successDiv.style.display = "block";
+        
+        setAuthToken(data.access_token);
+        
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 1200);
+
+      } catch (err) {
+        errorDiv.textContent = err.message;
+        errorDiv.style.display = "block";
+      }
+    });
+  </script>
+</body>
+</html>

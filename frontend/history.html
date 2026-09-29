@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume History - ResumeIQ AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/index.css">
+  <style>
+    .history-container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 0 2rem;
+    }
+    
+    .history-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    
+    .history-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+    }
+    
+    .history-info {
+      flex: 1;
+      min-width: 250px;
+    }
+    
+    .score-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 198, 255, 0.1);
+      border: 1px solid rgba(0, 198, 255, 0.25);
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: var(--color-primary);
+    }
+    
+    .actions-box {
+      display: flex;
+      gap: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="logo">ResumeIQ AI</a>
+      <nav>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="analyze.html">Analyze</a></li>
+          <li><a href="history.html" class="active">History</a></li>
+          <li id="auth-nav-link"><a href="login.html" class="btn btn-secondary">Login</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="history-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h2 style="font-size: 2.2rem; background: linear-gradient(135deg, #fff, var(--color-primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Analysis History</h2>
+        <p style="color: var(--color-text-muted);">Manage and review your saved resume analyses and scores.</p>
+      </div>
+      <a href="analyze.html" class="btn">New Analysis</a>
+    </div>
+
+    <!-- History Grid -->
+    <div id="history-grid" class="history-grid">
+      <p style="color: var(--color-text-muted);">Loading analysis archives...</p>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    checkAuth();
+
+    async function loadHistory() {
+      const grid = document.getElementById("history-grid");
+      const token = getAuthToken();
+      
+      try {
+        const response = await fetch(`${API_URL}/api/resume/history`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        const history = await response.json();
+        grid.innerHTML = "";
+
+        if (history.length === 0) {
+          grid.innerHTML = `
+            <div class="glass-card" style="text-align: center; padding: 4rem 2rem;">
+              <p style="color: var(--color-text-muted); margin-bottom: 1.5rem;">No resume records found in database.</p>
+              <a href="analyze.html" class="btn">Analyze Resume</a>
+            </div>
+          `;
+          return;
+        }
+
+        history.forEach(item => {
+          const card = document.createElement("div");
+          card.className = "glass-card history-card tilt-card";
+
+          const dateString = new Date(item.created_at).toLocaleDateString(undefined, {
+            year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+          });
+
+          card.innerHTML = `
+            <div class="history-info">
+              <h3 style="word-break: break-all;">${item.filename}</h3>
+              <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.35rem; flex-wrap: wrap;">
+                <span class="token-pill-badge badge-optimal" style="font-size: 0.75rem;">🎯 ${item.target_role || "Full Stack Developer"}</span>
+                <span style="color: var(--color-text-muted); font-size: 0.82rem;">${dateString}</span>
+              </div>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+              <div class="score-badge" title="Overall score">
+                ${Math.round(item.overall_score)}
+              </div>
+              <div class="actions-box">
+                <a href="results.html?id=${item.id}" class="btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;">View Details</a>
+                <button class="btn btn-secondary delete-btn" data-id="${item.id}" style="padding: 0.5rem 1rem; font-size: 0.9rem; border-color: #ff4d4d; color: #ff4d4d;">Delete</button>
+              </div>
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+
+        // Add Delete Handlers
+        document.querySelectorAll(".delete-btn").forEach(btn => {
+          btn.addEventListener("click", async (e) => {
+            const id = e.target.getAttribute("data-id");
+            if (confirm("Are you sure you want to permanently delete this resume analysis?")) {
+              await deleteAnalysis(id);
+            }
+          });
+        });
+
+        initTilt();
+
+      } catch (err) {
+        grid.innerHTML = `<p style="color: #ff4d4d;">Failed to load history list data.</p>`;
+      }
+    }
+
+    async function deleteAnalysis(id) {
+      const token = getAuthToken();
+      try {
+        const response = await fetch(`${API_URL}/api/resume/${id}`, {
+          method: "DELETE",
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (response.ok) {
+          loadHistory();
+        } else {
+          alert("Failed to delete analysis.");
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    loadHistory();
+  </script>
+</body>
+</html>

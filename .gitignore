@@ -1,0 +1,28 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local database and test files
+local_db.json
+sample_resume.pdf
+backend/local_db.json
+backend/sample_resume.pdf
+backend/create_pdf.py
+backend/test_api.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

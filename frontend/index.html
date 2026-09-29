@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResumeIQ AI - Futuristic Resume Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/index.css">
+  <style>
+    .hero-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      max-width: 1200px;
+      margin: 4rem auto;
+      padding: 0 2rem;
+      min-height: 70vh;
+      gap: 2rem;
+    }
+    
+    @media (max-width: 900px) {
+      .hero-section {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+      .canvas-container {
+        height: 350px !important;
+      }
+    }
+    
+    .hero-content h1 {
+      font-size: 3.5rem;
+      line-height: 1.2;
+      font-weight: 800;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #fff 30%, #a5b4fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .hero-content h2 {
+      font-size: 1.8rem;
+      color: var(--color-primary);
+      margin-bottom: 1.5rem;
+    }
+    
+    .hero-content p {
+      color: var(--color-text-muted);
+      font-size: 1.1rem;
+      margin-bottom: 2.5rem;
+      max-width: 500px;
+    }
+    
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+    }
+    
+    @media (max-width: 900px) {
+      .hero-content p {
+        margin: 0 auto 2.5rem auto;
+      }
+      .hero-actions {
+        justify-content: center;
+      }
+    }
+    
+    .canvas-container {
+      width: 100%;
+      height: 500px;
+      position: relative;
+    }
+    
+    #three-canvas {
+      width: 100%;
+      height: 100%;
+      outline: none;
+    }
+    
+    .features-section {
+      max-width: 1200px;
+      margin: 6rem auto;
+      padding: 0 2rem;
+      text-align: center;
+    }
+    
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+      margin-top: 3rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="nav-container">
+      <a href="index.html" class="logo">ResumeIQ AI</a>
+      <nav>
+        <ul>
+          <li><a href="index.html" class="active">Home</a></li>
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="analyze.html">Analyze</a></li>
+          <li><a href="history.html">History</a></li>
+          <li id="auth-nav-link"><a href="login.html" class="btn btn-secondary">Login</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero-section">
+      <div class="hero-content">
+        <h2>ResumeIQ AI</h2>
+        <h1>Analyze Your Resume.<br>Discover Your Potential.</h1>
+        <p>Use state-of-the-art AI to scan and analyze your resume, identify crucial skill gaps, check ATS compatibility, and match your profile directly with your dream job.</p>
+        <div class="hero-actions">
+          <a href="analyze.html" class="btn">Analyze My Resume</a>
+          <a href="#features" class="btn btn-secondary">Explore Features</a>
+        </div>
+      </div>
+      
+      <div class="canvas-container">
+        <!-- Three.js Canvas -->
+        <canvas id="three-canvas"></canvas>
+      </div>
+    </section>
+
+    <section id="features" class="features-section">
+      <h2>Advanced Features</h2>
+      <p style="color: var(--color-text-muted); max-width: 600px; margin: 0.5rem auto 3rem auto;">Premium analyzer tool loaded with powerful algorithms to optimize your application process.</p>
+      
+      <div class="features-grid">
+        <div class="glass-card">
+          <div style="font-size: 2.5rem; margin-bottom: 1rem;">🤖</div>
+          <h3>AI Analysis</h3>
+          <p style="color: var(--color-text-muted); margin-top: 0.5rem;">Intelligent parsing of skills, projects, and work experience using top-tier LLM AI modules.</p>
+        </div>
+        <div class="glass-card">
+          <div style="font-size: 2.5rem; margin-bottom: 1rem;">📊</div>
+          <h3>ATS Scanner</h3>
+          <p style="color: var(--color-text-muted); margin-top: 0.5rem;">Estimates compatibility score with Applicant Tracking Systems using keywords extraction.</p>
+        </div>
+        <div class="glass-card">
+          <div style="font-size: 2.5rem; margin-bottom: 1rem;">🎯</div>
+          <h3>Job Matching</h3>
+          <p style="color: var(--color-text-muted); margin-top: 0.5rem;">Paste any job description to compare credentials, match skills, and isolate improvement suggestions.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Three.js Library CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    // Three.js interactive 3D landing scene
+    let scene, camera, renderer, documentCard, particles;
+    const canvas = document.getElementById("three-canvas");
+
+    function init3D() {
+      if (!canvas) return;
+      
+      // Scene setup
+      scene = new THREE.Scene();
+      
+      // Camera
+      camera = new THREE.Camera();
+      camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
+      camera.position.z = 15;
+
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+      renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+
+      // Document Card
+      const cardGeometry = new THREE.BoxGeometry(4, 5.5, 0.15);
+      const cardMaterial = new THREE.MeshPhongMaterial({
+        color: 0x12123a,
+        specular: 0x00c6ff,
+        shininess: 80,
+        flatShading: true
+      });
+      documentCard = new THREE.Mesh(cardGeometry, cardMaterial);
+      scene.add(documentCard);
+
+      // Glow Ring
+      const ringGeom = new THREE.RingGeometry(3.5, 3.7, 32);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0x9d4edd, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
+      const ring = new THREE.Mesh(ringGeom, ringMat);
+      ring.position.z = 0.1;
+      documentCard.add(ring);
+
+      // Light Sources
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0x00c6ff, 1);
+      dirLight.position.set(5, 5, 5);
+      scene.add(dirLight);
+
+      const purpleLight = new THREE.DirectionalLight(0x9d4edd, 1.2);
+      purpleLight.position.set(-5, -5, 5);
+      scene.add(purpleLight);
+
+      // Particle System
+      const particleGeom = new THREE.BufferGeometry();
+      const count = 50;
+      const positions = new Float32Array(count * 3);
+      for(let i=0; i<count*3; i+=3) {
+        positions[i] = (Math.random() - 0.5) * 12;
+        positions[i+1] = (Math.random() - 0.5) * 12;
+        positions[i+2] = (Math.random() - 0.5) * 6;
+      }
+      particleGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      
+      const particleMat = new THREE.PointsMaterial({
+        color: 0x00c6ff,
+        size: 0.12,
+        transparent: true,
+        opacity: 0.8
+      });
+      particles = new THREE.Points(particleGeom, particleMat);
+      scene.add(particles);
+
+      // Animation Loop
+      animate();
+
+      // Mouse Parallax event listeners
+      window.addEventListener("mousemove", (e) => {
+        const mouseX = (e.clientX / window.innerWidth) - 0.5;
+        const mouseY = (e.clientY / window.innerHeight) - 0.5;
+        
+        documentCard.rotation.y = mouseX * 0.5;
+        documentCard.rotation.x = mouseY * 0.5;
+      });
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Auto rotation
+      documentCard.rotation.y += 0.005;
+      particles.rotation.z += 0.001;
+
+      // Pulse ring opacity
+      const time = Date.now() * 0.003;
+      documentCard.children[0].material.opacity = 0.3 + Math.sin(time) * 0.2;
+
+      renderer.render(scene, camera);
+    }
+
+    // Initialize 3D scene
+    try {
+      init3D();
+      window.addEventListener("resize", () => {
+        camera.aspect = canvas.clientWidth / canvas.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+      });
+    } catch(err) {
+      console.warn("WebGL not supported or initialization failed.", err);
+    }
+  </script>
+</body>
+</html>
